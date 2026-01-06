@@ -113,6 +113,18 @@ def process_large_issue_and_pr_message_collection(repo_id, repo_git: str, logger
 
     logger.info(f"{task_name}: Collecting github messages for {len(comment_urls)} prs/issues")
 
+    # Build issue and PR URL mappings once before processing batches
+    # This prevents full table scans on every batch (issue #3440)
+    issue_url_to_id_map = {}
+    issues = augur_db.session.query(Issue).filter(Issue.repo_id == repo_id).all()
+    for issue in issues:
+        issue_url_to_id_map[issue.issue_url] = issue.issue_id
+
+    pr_issue_url_to_id_map = {}
+    prs = augur_db.session.query(PullRequest).filter(PullRequest.repo_id == repo_id).all()
+    for pr in prs:
+        pr_issue_url_to_id_map[pr.pr_issue_url] = pr.pull_request_id
+
     all_data = []
     skipped_urls = 0
 
@@ -124,17 +136,18 @@ def process_large_issue_and_pr_message_collection(repo_id, repo_git: str, logger
             logger.info(f"{task_name}: PR or issue comment url of {comment_url} returned 404. Skipping.")
             skipped_urls += 1
        
-        if len(all_data) >= 20:
-            process_messages(all_data, task_name, repo_id, logger, augur_db)
+        # Increased batch size from 20 to 200 for better performance
+        if len(all_data) >= 200:
+            process_messages(all_data, task_name, repo_id, logger, augur_db, issue_url_to_id_map, pr_issue_url_to_id_map)
             all_data.clear()
 
     if len(all_data) > 0:
-        process_messages(all_data, task_name, repo_id, logger, augur_db)
+        process_messages(all_data, task_name, repo_id, logger, augur_db, issue_url_to_id_map, pr_issue_url_to_id_map)
 
     logger.info(f"{task_name}: Finished. Skipped {skipped_urls} comment URLs due to 404.")
         
 
-def process_messages(messages, task_name, repo_id, logger, augur_db):
+def process_messages(messages, task_name, repo_id, logger, augur_db, issue_url_to_id_map=None, pr_issue_url_to_id_map=None):
 
     tool_source = "Pr comment task"
     tool_version = "2.0"
@@ -151,17 +164,18 @@ def process_messages(messages, task_name, repo_id, logger, augur_db):
     if len(messages) == 0:
         logger.info(f"{task_name}: No messages to process")
 
-    # create mapping from issue url to issue id of current issues
-    issue_url_to_id_map = {}
-    issues = augur_db.session.query(Issue).filter(Issue.repo_id == repo_id).all()
-    for issue in issues:
-        issue_url_to_id_map[issue.issue_url] = issue.issue_id
+    # Build mappings if not provided (for backward compatibility with fast_retrieve_all_pr_and_issue_messages)
+    if issue_url_to_id_map is None:
+        issue_url_to_id_map = {}
+        issues = augur_db.session.query(Issue).filter(Issue.repo_id == repo_id).all()
+        for issue in issues:
+            issue_url_to_id_map[issue.issue_url] = issue.issue_id
 
-    # create mapping from pr url to pr id of current pull requests
-    pr_issue_url_to_id_map = {}
-    prs = augur_db.session.query(PullRequest).filter(PullRequest.repo_id == repo_id).all()
-    for pr in prs:
-        pr_issue_url_to_id_map[pr.pr_issue_url] = pr.pull_request_id
+    if pr_issue_url_to_id_map is None:
+        pr_issue_url_to_id_map = {}
+        prs = augur_db.session.query(PullRequest).filter(PullRequest.repo_id == repo_id).all()
+        for pr in prs:
+            pr_issue_url_to_id_map[pr.pr_issue_url] = pr.pull_request_id
 
 
     message_len = len(messages)
