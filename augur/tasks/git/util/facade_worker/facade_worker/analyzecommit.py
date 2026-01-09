@@ -167,13 +167,13 @@ def analyze_commit(
         logger.error(f"Failed to run git log for commit {commit}: {e}")
         return [], {}
 
-    try:
-        execute_sql(s.sql.text("""
-            INSERT INTO working_commits (repos_id, working_commit)
-            VALUES (:repo_id, :commit)
-        """).bindparams(repo_id=repo_id, commit=commit))
-    except Exception as e:
-        logger.error(f"Failed to insert working commit {commit} into DB: {e}")
+    # try:
+    #     execute_sql(s.sql.text("""
+    #         INSERT INTO working_commits (repos_id, working_commit)
+    #         VALUES (:repo_id, :commit)
+    #     """).bindparams(repo_id=repo_id, commit=commit))
+    # except Exception as e:
+    #     logger.error(f"Failed to insert working commit {commit} into DB: {e}")
 
     try:
         commit_message = check_output(

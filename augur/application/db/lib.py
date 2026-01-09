@@ -106,18 +106,18 @@ def get_gitlab_repo_by_src_id(src_id):
         return repo
         
     
-def remove_working_commits_by_repo_id_and_hashes(repo_id, commit_hashes):
+# def remove_working_commits_by_repo_id_and_hashes(repo_id, commit_hashes):
+#
+#     remove_working_commits = s.sql.text(""DELETE FROM working_commits 
+#         WHERE repos_id = :repo_id AND working_commit IN :hashes
+#         "").bindparams(repo_id=repo_id,hashes=tuple(commit_hashes))
+#     
+#     execute_sql(remove_working_commits)  
 
-    remove_working_commits = s.sql.text("""DELETE FROM working_commits 
-        WHERE repos_id = :repo_id AND working_commit IN :hashes
-        """).bindparams(repo_id=repo_id,hashes=tuple(commit_hashes))
-    
-    execute_sql(remove_working_commits)  
-
-def remove_working_commits_by_repo_id(repo_id):
-
-    remove_working_commits = s.sql.text("""DELETE FROM working_commits WHERE repos_id=:repo_id""").bindparams(repo_id=repo_id)
-    execute_sql(remove_working_commits)
+# def remove_working_commits_by_repo_id(repo_id):
+#
+#     remove_working_commits = s.sql.text(""DELETE FROM working_commits WHERE repos_id=:repo_id"").bindparams(repo_id=repo_id)
+#     execute_sql(remove_working_commits)
 
 def remove_commits_by_repo_id_and_hashes(repo_id, commit_hashes):
 
@@ -132,17 +132,17 @@ def remove_commits_by_repo_id(repo_id):
     remove_commits = s.sql.text("""DELETE FROM commits WHERE repo_id=:repo_id""").bindparams(repo_id=repo_id)
     execute_sql(remove_commits) 
 
-def get_working_commits_by_repo_id(repo_id):
-
-    query = s.sql.text("""SELECT working_commit FROM working_commits WHERE repos_id=:repo_id
-    """).bindparams(repo_id=repo_id)
-
-    try:
-        working_commits = fetchall_data_from_sql_text(query)
-    except:
-        working_commits = []
-
-    return working_commits
+# def get_working_commits_by_repo_id(repo_id):
+#
+#     query = s.sql.text(""SELECT working_commit FROM working_commits WHERE repos_id=:repo_id
+#     "").bindparams(repo_id=repo_id)
+#
+#     try:
+#         working_commits = fetchall_data_from_sql_text(query)
+#     except:
+#         working_commits = []
+#
+#     return working_commits
 
 def get_missing_commit_message_hashes(repo_id):
 
