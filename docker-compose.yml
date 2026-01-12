@@ -14,6 +14,11 @@ services:
       - augurpostgres:/var/lib/postgresql/data
     networks:
       - augur
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUGUR_DB_USER:-augur} -d ${AUGUR_DB_NAME:-augur}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: "redis:alpine"
@@ -45,6 +50,12 @@ services:
       - RABBIT_MQ_DEFAULT_VHOST=${AUGUR_RABBITMQ_VHOST:-augur_vhost}
     networks:
       - augur
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
 
   augur:
     image: augur-new:latest
@@ -77,11 +88,16 @@ services:
       - CACHE_DATADIR=/cache
       - CACHE_LOCKDIR=/cache
       - CELERYBEAT_SCHEDULE_DB=/tmp/celerybeat-schedule.db
+      - HOME=/tmp
     depends_on:
-      - augur-db
-      - redis
-      - augur-keyman
-      - rabbitmq
+      augur-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      augur-keyman:
+        condition: service_started
     networks:
       - augur
     user: 2345:2345  # Run as an arbitrary non-root user
